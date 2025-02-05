@@ -9,7 +9,7 @@ import { config } from "dotenv";
 import cors from "cors";
 import { errorMiddleware } from "./Middlewares/error.js";
 import cookieParser from "cookie-parser";
-import { isAuthenticated, authorizeRoles } from './Middlewares/auth.js'
+import {isAuthenticated, authorizeRoles } from './Middlewares/auth.js'
 
 const app = express();
 config({ path: "./config/config.env" });
