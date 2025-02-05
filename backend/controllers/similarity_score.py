@@ -12,7 +12,7 @@ candidate_collection = db["candidates"]
 expert_collection = db["experts"]
 
 groq_client = Groq(
-    api_key="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",
+    api_key="//YourGroqAPIKeyHere",
 )
 system_prompt = "Given two lists of skills, Skills1 and Skills2, calculate the similarity score between them from 0 to 100 based on your Domain Relevance,Functional Overlap,Technical Similarity,Interchangeability,Compatibility,Usage Context,Outcome Similarity. Provide only the score."
 expert_dict={}
