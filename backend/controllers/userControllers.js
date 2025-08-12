@@ -1,5 +1,7 @@
 import { catchAsyncErrors } from "../Middlewares/catchAsyncError.js";
 import { User } from "../models/userSchema.js";
+import { Candidate } from "../models/candidateSchema.js";
+import { Expert } from "../models/expertSchema.js";
 import ErrorHandler from "../Middlewares/error.js";
 import { sendToken } from "../utils/jwtToken.js";
 
@@ -20,6 +22,34 @@ export const register = catchAsyncErrors(async (req, res, next) => {
     password,
     role,
   });
+
+  // Create role-based profile automatically
+  try {
+    if (role === 'candidate') {
+      await Candidate.create({
+        user: user._id,
+        name: user.name,
+        domain: [],
+        researchInterests: [],
+        experienceYears: 0,
+        projects: []
+      });
+    } else if (role === 'expert') {
+      await Expert.create({
+        user: user._id,
+        name: user.name,
+        domain: [],
+        experienceYears: 0,
+        publications: 0,
+        patents: 0
+      });
+    }
+    // Admin doesn't need a separate profile
+  } catch (profileError) {
+    console.error("Error creating profile:", profileError);
+    // Don't fail registration if profile creation fails
+  }
+
   // console.log(res);
   sendToken(user, 201, res, "User Registered!");
 });
@@ -57,7 +87,6 @@ export const logout = catchAsyncErrors(async (req, res, next) => {
       message: "Logged Out Successfully.",
     });
 });
-
 
 export const getUser = catchAsyncErrors((req, res, next) => {
   const user = req.user;

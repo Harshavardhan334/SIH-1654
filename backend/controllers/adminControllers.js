@@ -3,10 +3,11 @@ import { Expert } from "../models/expertSchema.js";
 import { Candidate } from "../models/candidateSchema.js";
 import { InterviewBoard } from "../models/interviewBoardSchema.js";
 import ErrorHandler from "../Middlewares/error.js";
+import { spawn } from "child_process";
 
 export const getCandidates = catchAsyncErrors(async (req, res, next) => {
     const candidates = await Candidate.find({});
-    console.log(candidates);
+    // console.log(candidates);
     res.status(200).json({
         success: true,
         candidates,
@@ -32,44 +33,39 @@ export const getInfo = catchAsyncErrors(async (req, res, next) => {
 });
 
 // Add the matching algo 
-export const getBestExperts = catchAsyncErrors((req, res, next) => {
-    const candidateId = req.params._id;
-    
-    // Spawn a child process to run the Python script
-    const process = spawn('python', ["./similarity_score.py", candidateId]);
-    
-    let result = '';
+// Temporary JS-based matching as a placeholder
+export const getBestExperts = catchAsyncErrors(async (req, res, next) => {
+  const candidateId = req.params._id;
+  const candidate = await Candidate.findById(candidateId);
+  if (!candidate) {
+    return next(new ErrorHandler("Candidate not found", 404));
+  }
 
-    process.stdout.on('data', (data) => {
-        result += data.toString();
-    });
+  const experts = await Expert.find({});
+  // Simple Jaccard similarity on domain arrays
+  const candDomains = new Set(candidate.domain || []);
+  const scored = experts.map((e) => {
+    const ed = new Set(e.domain || []);
+    const inter = [...ed].filter((d) => candDomains.has(d)).length;
+    const union = new Set([...(e.domain || []), ...(candidate.domain || [])]).size;
+    const score = union === 0 ? 0 : inter / union;
+    return { expert: e, score };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  const top = scored.slice(0, 6).map((s) => ({
+    _id: s.expert._id,
+    name: s.expert.name,
+    domain: s.expert.domain,
+    score: s.score,
+  }));
 
-    process.on('close', (code) => {
-        // Clean up the result string to match JSON array format
-        let cleanedResult = result
-            .replace(/^\[|\]$/g, '')  // Remove the brackets
-            .replace(/'/g, '"')       // Replace single quotes with double quotes
-            .split(',')               // Split the string by comma
-            .map(item => item.trim()); // Trim whitespace
-
-        // Convert to JavaScript array
-        let bestExperts = cleanedResult;
-
-        res.status(200).json({
-            success: true,
-            bestExperts
-        });
-    });
-
-    process.on('error', (err) => {
-        return next(new ErrorHandler("Error executing Python script", 500));
-    });
+  return res.status(200).json({ success: true, bestExperts: top });
 });
 
 
 export const setInterview = catchAsyncErrors(async (req, res, next) => {
     const { boardName, interviewDate, subjectArea, candidate, experts, relevancyScore } = req.body;
-    const createdBy = req.body.user._id;
+    const createdBy = req.user._id;
     if (!boardName || !interviewDate || !subjectArea || !candidate || !experts || !relevancyScore) {
         return next(new ErrorHandler("Please fill full form!"));
     }
@@ -90,4 +86,12 @@ export const setInterview = catchAsyncErrors(async (req, res, next) => {
         success: true,
         interviewBoard
     });
+});
+
+export const getInterviews = catchAsyncErrors(async (req, res, next) => {
+  const interviews = await InterviewBoard.find({})
+    .populate({ path: 'candidate', select: 'name domain' })
+    .populate({ path: 'experts', select: 'name domain' })
+    .populate({ path: 'createdBy', select: 'name role' });
+  res.status(200).json({ success: true, interviews });
 });

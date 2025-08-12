@@ -17,11 +17,11 @@ const PORT = process.env.PORT || 4000;
 
 
 app.use(
-    cors({
-        origin: [process.env.FRONTEND_URL],
-        method: ["GET", "POST", "DELETE", "PUT"],
-        credentials: true,
-    })
+  cors({
+    origin: [process.env.FRONTEND_URL],
+    methods: ["GET", "POST", "DELETE", "PUT", "PATCH", "OPTIONS"],
+    credentials: true,
+  })
 );
 
 app.use(cookieParser());

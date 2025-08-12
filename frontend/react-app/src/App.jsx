@@ -6,6 +6,7 @@ import CandidatePage from './components/CandidatePage';
 import MatchPage from './components/MatchPage';
 
 import Login from "./pages/Login"
+import Register from "./pages/Register"
 import axios from 'axios';
 axios.defaults.withCredentials=true;
 
@@ -26,6 +27,7 @@ function App() {
         <Route path="/candidate/:id" element={<CandidatePage />} />
         <Route path="/match" element={<MatchPage />} />
         <Route path="/" element={<Login/>}/>
+        <Route path="/register" element={<Register/>}/>
         <Route path="/interviews" element={<InterviewsPage />} />
         <Route path='/candidate' element={<CandidateDashboard/>}/>
         <Route path='/expert' element={<ExpertDashboard/>}/>

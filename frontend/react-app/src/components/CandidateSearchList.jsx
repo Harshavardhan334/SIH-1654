@@ -18,7 +18,7 @@ export default function CandidateSearchList({ candidates, matchClick }) {
 
   const viewDetails = () => {
     if (selectedCandidate) {
-      navigate(`/candidate/${selectedCandidate._id}`);
+      navigate(`/candidate/${selectedCandidate._id}`, { state: { candidate: selectedCandidate } });
     }
   };
 
@@ -45,14 +45,14 @@ export default function CandidateSearchList({ candidates, matchClick }) {
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredCandidates.map((candidate) => (
               <tr
-                key={candidate.id}
+                key={candidate._id}
                 onClick={() => handleSelectCandidate(candidate)}
                 className="cursor-pointer hover:bg-gray-50"
               >
                 <td className="px-4 py-2 text-sm font-medium text-gray-900">
                   {candidate.name}
                 </td>
-                <td className="px-4 py-2 text-sm text-gray-500">{candidate.position}</td>
+                <td className="px-4 py-2 text-sm text-gray-500">{(candidate.domain||[]).join(', ')}</td>
               </tr>
             ))}
           </tbody>

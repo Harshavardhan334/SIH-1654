@@ -1,10 +1,26 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Header from '../components/Header';
-import { useInterviews } from '../context/InterviewsContext';
+import axios from 'axios';
 
 export default function InterviewsPage() {
-  const { interviews } = useInterviews();
+  const [interviews, setInterviews] = useState([]);
   const [expandedInterview, setExpandedInterview] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchInterviews = async () => {
+      try {
+        const res = await axios.get('http://localhost:4000/admin/interviews', { withCredentials: true });
+        setInterviews(res.data.interviews || []);
+      } catch (e) {
+        setError(e.response?.data?.message || e.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInterviews();
+  }, []);
 
   const toggleExperts = (interviewId) => {
     // Toggle the expanded interview state
@@ -20,35 +36,31 @@ export default function InterviewsPage() {
             Scheduled Interviews
           </h2>
           <div className="mt-8">
-            {interviews.length === 0 ? (
+            {loading ? (
+              <p className="text-center">Loading...</p>
+            ) : error ? (
+              <p className="text-center text-red-600">{error}</p>
+            ) : interviews.length === 0 ? (
               <p className="text-center text-lg text-gray-600">No scheduled interviews yet.</p>
             ) : (
               <ul className="divide-y divide-gray-200">
                 {interviews.map((interview) => (
-                  <li key={interview.id} className="p-4 bg-white rounded-md shadow-md mb-4">
-                    
+                  <li key={interview._id} className="p-4 bg-white rounded-md shadow-md mb-4">
                     <h3 className="text-lg font-semibold text-gray-900">
-                      Candidate: {interview.candidate.name}
+                      Candidate: {interview.candidate?.name}
                     </h3>
-                    <p className="text-sm text-gray-600">
-                      C_ID: {interview.candidate.id}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Position: {interview.candidate.position}
-                    </p>
-                    <p className="text-sm text-gray-600">Date: {interview.date}</p>
-                    {/* Toggle button to show/hide experts */}
+                    <p className="text-sm text-gray-600">Subject: {interview.subjectArea}</p>
+                    <p className="text-sm text-gray-600">Date: {new Date(interview.interviewDate).toLocaleString()}</p>
                     <button
                       className="mt-2 text-indigo-500 hover:underline"
-                      onClick={() => toggleExperts(interview.id)}
+                      onClick={() => toggleExperts(interview._id)}
                     >
-                      {expandedInterview === interview.id ? 'Hide Experts' : 'Show Experts'}
+                      {expandedInterview === interview._id ? 'Hide Experts' : 'Show Experts'}
                     </button>
-                    {/* Conditionally render the experts list */}
-                    {expandedInterview === interview.id && (
+                    {expandedInterview === interview._id && (
                       <ul className="mt-2 list-disc list-inside text-gray-600">
-                        {interview.experts.map((expert) => (
-                          <li key={expert.id}>{expert.name} - {expert.expertise}</li>
+                        {(interview.experts || []).map((expert) => (
+                          <li key={expert._id}>{expert.name} - {(expert.domain || []).join(', ')}</li>
                         ))}
                       </ul>
                     )}

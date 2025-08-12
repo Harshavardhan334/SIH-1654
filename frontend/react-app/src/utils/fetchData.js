@@ -10,13 +10,13 @@ export const useDataFetch = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const candidatesResponse = await axios.get('http://localhost:4000/admin/candidates');
+        const candidatesResponse = await axios.get('http://localhost:4000/admin/candidates', { withCredentials: true });
         // console.log(candidatesResponse);
         if (!candidatesResponse.data.success) {
           throw new Error('Network response was not ok');
         }
-        const candidatesData = await candidatesResponse.data.candidates;
-        console.log(candidatesData);
+        const candidatesData = candidatesResponse.data.candidates;
+        // console.log(candidatesData);
 
         // Uncomment and update the experts API call as needed
         // const expertsResponse = await fetch('http://localhost:4000/admin/experts');
@@ -26,7 +26,7 @@ export const useDataFetch = () => {
         // const expertsData = await expertsResponse.json();
         // console.log(expertsData);
 
-        setCandidates(candidatesData.candidates);
+        setCandidates(candidatesData);
         // setExperts(expertsData.experts);
 
       } catch (error) {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 export default function Login() {
   const [formData, setFormData] = useState({
@@ -23,7 +23,7 @@ export default function Login() {
 
       // On successful response
       if (response.status === 201 && response.data.user) {
-        console.log('Login successful:', response.data);
+        // console.log('Login successful:', response.data);
         navigate(`/${response.data.user.role}`);
       } else {
         console.error('Unexpected response data:', response.data);
@@ -144,6 +144,10 @@ export default function Login() {
                     >
                       Log in
                     </button>
+                  </div>
+                  <div className="text-center text-sm text-gray-600">
+                    Don’t have an account?{' '}
+                    <Link className="text-blue-600 hover:underline" to="/register">Register</Link>
                   </div>
                 </div>
               </form>

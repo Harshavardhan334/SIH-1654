@@ -8,7 +8,7 @@ export default function Header() {
   const handleLogout = async () => {
     try {
       const response = await axios.get('http://localhost:4000/logout');
-console.log(response);
+// console.log(response);
       if (response.data.success) {
         navigate('/'); // Redirect to the home or login page after successful logout
       } else {

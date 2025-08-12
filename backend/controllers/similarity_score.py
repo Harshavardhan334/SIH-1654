@@ -4,97 +4,86 @@ import sys
 from groq import Groq
 from pymongo import MongoClient
 
+# DB connection
 client = MongoClient('mongodb://127.0.0.1:27017')
-
 db = client["PROFILE_MATCHER"]
 candidate_collection = db["candidates"]
-
 expert_collection = db["experts"]
 
-groq_client = Groq(
-    api_key="//YourGroqAPIKeyHere",
-)
-system_prompt = "Given two lists of skills, Skills1 and Skills2, calculate the similarity score between them from 0 to 100 based on your Domain Relevance,Functional Overlap,Technical Similarity,Interchangeability,Compatibility,Usage Context,Outcome Similarity. Provide only the score."
-expert_dict={}
-candidate={}
+# Groq API
+groq_client = Groq(api_key="//YourGroqAPIKeyHere")
+
+system_prompt = """
+Given two lists of skills, Skills1 and Skills2, calculate the similarity score between them from 0 to 100 
+based on Domain Relevance, Functional Overlap, Technical Similarity, Interchangeability, Compatibility, 
+Usage Context, and Outcome Similarity. Provide only the score.
+"""
+
+# Data holders
+expert_dict = {}
+candidate_data = {}
+
 def process_all_experts():
     for expert in expert_collection.find():
-         expert_dict.update({expert['_id'],{"technical_skills":(expert['domain']),"non_technical_skills":(expert['non_technical_skills'])}})
-
+        expert_dict[expert['_id']] = {
+            "technical_skills": expert.get('domain', []),
+            "non_technical_skills": expert.get('non_technical_skills', [])
+        }
 
 def get_candidate_domain(candidate_id):
-    try:
-        # Find the candidate by their ID
-        candidate_user = candidate_collection.find_one({"_id": candidate_id})
-
-        if not candidate_user:
-            print("Candidate not found!")
-            return
-
-        domain = candidate_user.get("domain", [])
-        non_tech_skill = candidate_user.get("non_technical_skills", [])
-        candidate.update({candidate_id:{"technical_skills":domain,"non_technical_skills":non_tech_skill}})
-
-    except Exception as e:
-        print("An error occurred:", e)
+    candidate_user = candidate_collection.find_one({"_id": candidate_id})
+    if not candidate_user:
+        print("Candidate not found!")
+        sys.exit(1)
+    
+    candidate_data["technical_skills"] = candidate_user.get("domain", [])
+    candidate_data["non_technical_skills"] = candidate_user.get("non_technical_skills", [])
 
 def getScore(prompt):
     scores = []
-    for i in range(3):
+    for _ in range(3):
         chat_completion = groq_client.chat.completions.create(
             messages=[
-                {
-                    "role": "system",
-                    "content": system_prompt,
-                },
-                {
-                    "role": "user",
-                    "content": prompt,
-                }
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
             ],
             model="llama3-groq-70b-8192-tool-use-preview",
         )
-
-        result = (chat_completion.choices[0].message.content)
+        result = chat_completion.choices[0].message.content
         match = re.search(r'\d+', result)
-        matched_value = int(match.group())
-        print(matched_value)
-        scores.append(matched_value)
+        if match:
+            scores.append(int(match.group()))
+    return statistics.median(scores) if scores else 0
 
-    return (statistics.median(scores))
+# Weights
+w1, w2 = 2, 1
+adjusted_w1, adjusted_w2 = w1 / (w1 + w2), w2 / (w1 + w2)
 
-w1=2
-w2=1
-adjusted_w1=w1/(w1+w2)
-adjusted_w2=w2/(w1+w2)
-dict_score_non_technical={}
-dict_score_technical={}
+# Prepare data
 get_candidate_domain(sys.argv[1])
+process_all_experts()
 
-for i in expert_dict:
-    prompt_technical = (
-        f"skills1: {', '.join(candidate['technical_skills'])} "+"\n "+
-        f"skills2: {', '.join(expert_dict['i']['technical_skills'])}"
-    )
-    prompt_non_technical = (
-        f"skills1: {', '.join(expert_dict[candidate]['non_technical_skills'])} "+"\n "+
-        f"skills2: {', '.join(expert_dict['i']['non_technical_skills'])}"
-    )
+dict_score_technical = {}
+dict_score_non_technical = {}
 
-    dict_score_technical.update({i:getScore(prompt_technical)})
-    dict_score_non_technical.update({i:getScore(prompt_non_technical)})
+for exp_id, exp_data in expert_dict.items():
+    prompt_technical = f"skills1: {candidate_data['technical_skills']}\nskills2: {exp_data['technical_skills']}"
+    prompt_non_technical = f"skills1: {candidate_data['non_technical_skills']}\nskills2: {exp_data['non_technical_skills']}"
 
-relevancy_score={}
-for i in expert_dict:
-    score=dict_score_technical[i]*adjusted_w1+dict_score_non_technical[i]*adjusted_w2
-    relevancy_score.update({i,score})
+    dict_score_technical[exp_id] = getScore(prompt_technical)
+    dict_score_non_technical[exp_id] = getScore(prompt_non_technical)
 
+# Final relevance score
+relevancy_score = {
+    exp_id: dict_score_technical[exp_id] * adjusted_w1 + dict_score_non_technical[exp_id] * adjusted_w2
+    for exp_id in expert_dict
+}
+
+# Sort by score
 sorted_relevancy = sorted(relevancy_score.items(), key=lambda x: x[1], reverse=True)
 
 def get_top_experts():
-    if len(sorted_relevancy) <= 6:
-        return [key for key, value in sorted_relevancy]
-    return [key for key, value in sorted_relevancy[:6]]
+    return [exp_id for exp_id, _ in sorted_relevancy[:3]]
 
 top_experts = get_top_experts()
 print(top_experts)

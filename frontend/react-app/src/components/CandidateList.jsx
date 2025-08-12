@@ -17,15 +17,15 @@ export default function CandidateList() {
 
     try {
       // Use axios to send a GET request to the backend
-      console.log(candidate);
-      const response = await axios.get(`http://localhost:4000/match/${candidate._id}`);
+      // console.log(candidate);
+      const response = await axios.get(`http://localhost:4000/admin/match/${candidate._id}`, { withCredentials: true });
 
       // Check for success in the response
       if (response.data.success) {
         navigate('/match', {
           state: {
             candidate,
-            experts: response.data.bestExperts || [],
+            bestExperts: response.data.bestExperts || [],
           },
         });
       } else {

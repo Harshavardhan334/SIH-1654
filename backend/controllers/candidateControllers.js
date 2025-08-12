@@ -30,11 +30,11 @@ import ErrorHandler from "../Middlewares/error.js";
 // });
 
 export const getCandidateInfo = catchAsyncErrors(async (req, res, next) => {
-  const candidate = await Candidate.findOne({ user: user._id });
-  const interviews = await InterviewBoard.find({ candidate: candidate._id })
+  const candidate = await Candidate.findOne({ user: req.user._id });
+  const interviews = await InterviewBoard.find({ candidate: candidate?._id })
     .populate({
-      path: 'expert',
-      select: 'name email role',
+      path: 'experts',
+      select: 'name domain',
     });
 
   res.status(200).json({
@@ -46,7 +46,7 @@ export const getCandidateInfo = catchAsyncErrors(async (req, res, next) => {
 
 export const registerCandidate = catchAsyncErrors(async (req, res, next) => {
   // console.log(req.user);
-  const { name, email, _id } = req.user; 
+  const { name, _id } = req.user; 
   const {
     domain,
     researchInterests,
@@ -58,9 +58,20 @@ export const registerCandidate = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Please fill in the entire form!"));
   }
 
-  const isEmail = await Candidate.findOne({ email });
-  if (isEmail) {
-    return next(new ErrorHandler("Email already registered!"));
+  const existing = await Candidate.findOne({ user: _id });
+  if (existing) {
+    // Update existing profile instead of creating new one
+    existing.name = name;
+    existing.domain = domain;
+    existing.researchInterests = researchInterests;
+    existing.experienceYears = experienceYears;
+    existing.projects = projects;
+    await existing.save();
+    
+    return res.status(200).json({
+      success: true,
+      candidate: existing,
+    });
   }
 
   const candidate = await Candidate.create({
@@ -79,9 +90,9 @@ export const registerCandidate = catchAsyncErrors(async (req, res, next) => {
 });
 
 export const updateCandidate = catchAsyncErrors(async (req, res, next) => {
-  const { userId, name, domain, researchInterests, experienceYears, projects } = req.body;
+  const { name, domain, researchInterests, experienceYears, projects } = req.body;
 
-  let candidate = await Candidate.findOne({ userId });
+  let candidate = await Candidate.findOne({ user: req.user._id });
   if (!candidate) {
       return next(new ErrorHandler("Candidate not found!", 404));
   }

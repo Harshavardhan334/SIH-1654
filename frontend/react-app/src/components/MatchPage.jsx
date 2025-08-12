@@ -1,20 +1,44 @@
-import React from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Header from './Header';
-import { useInterviews } from '../context/InterviewsContext';
+import axios from 'axios';
+
 export default function MatchPage() {
   const location = useLocation();
-  const { candidate, bestExperts} = location.state || {}; // receive the remove function
-  const { addInterview, interviews } = useInterviews();
+  const navigate = useNavigate();
+  const { candidate, bestExperts } = location.state || {};
+  const [loading, setLoading] = useState(false);
 
-  // Schedule interview and remove the candidate
+  const handleScheduleInterview = async () => {
+    if (!candidate || !bestExperts || bestExperts.length === 0) {
+      alert('No candidate or experts data available');
+      return;
+    }
 
-  const handleScheduleInterview = () => {
-    if(Object.keys(interviews).length=== Object.keys(interviews.filter((i)=>i.candidate.id!=candidate.id)).length){
-    addInterview(candidate, bestExperts); 
-    alert('Interview scheduled!');}
-    else {
-    alert('Interview already scheduled!');
+    setLoading(true);
+    try {
+      const interviewData = {
+        boardName: `Panel-${candidate.name}-${Date.now()}`,
+        interviewDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week from now
+        subjectArea: (candidate.domain || []).join(', '),
+        candidate: candidate._id,
+        experts: bestExperts.map(expert => expert._id),
+        relevancyScore: bestExperts.map(expert => expert.score || 0.8)
+      };
+
+      const response = await axios.post('http://localhost:4000/admin/setinterview', interviewData, { withCredentials: true });
+      
+      if (response.data.success) {
+        alert('Interview scheduled successfully!');
+        navigate('/admin'); // Redirect back to admin dashboard
+      } else {
+        alert('Failed to schedule interview');
+      }
+    } catch (error) {
+      console.error('Error scheduling interview:', error);
+      alert(error.response?.data?.message || 'Failed to schedule interview');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -33,8 +57,9 @@ export default function MatchPage() {
               <div className="p-4 bg-white shadow-md rounded-md">
                 <h3 className="text-xl font-semibold text-gray-900">Candidate</h3>
                 <p className="mt-2 text-lg text-gray-600">Name: {candidate.name}</p>
-                <p className="text-lg text-gray-600">Position: {candidate.position}</p>
-                <p className="text-lg text-gray-600">Interview Date: {candidate.interviewDate}</p>
+                <p className="text-lg text-gray-600">Domains: {(candidate.domain || []).join(', ')}</p>
+                <p className="text-lg text-gray-600">Experience: {candidate.experienceYears} years</p>
+                <p className="text-lg text-gray-600">Research Interests: {(candidate.researchInterests || []).join(', ')}</p>
               </div>
             </div>
 
@@ -43,9 +68,9 @@ export default function MatchPage() {
               <div className="text-center p-4 bg-gray-100 rounded-md">
                 <h3 className="text-center text-xl font-semibold text-gray-900">Suitable Experts</h3>
                 <ul className="items-center mt-4 list-disc list-inside text-gray-600">
-                  {topExperts.map((expert) => (
-                    <li key={expert.id} className="flex justify-between items-center">
-                      <span>{expert.name} - {expert.expertise}</span>
+                  {(bestExperts || []).map((expert) => (
+                    <li key={expert._id} className="flex justify-between items-center">
+                      <span>{expert.name} - {(expert.domain || []).join(', ')}{expert.score !== undefined ? ` (score: ${expert.score.toFixed(2)})` : ''}</span>
                     </li>
                   ))}
                 </ul>
@@ -56,9 +81,10 @@ export default function MatchPage() {
           <div className="text-center mt-8">
             <button
               onClick={handleScheduleInterview}
-              className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700"
+              disabled={loading}
+              className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-gray-400"
             >
-              Schedule Interview
+              {loading ? 'Scheduling...' : 'Schedule Interview'}
             </button>
           </div>
         </div>
