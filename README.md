@@ -7,8 +7,7 @@ A full-stack web application for managing interviews with role-based access cont
 - **Multi-role Authentication**: Admin, Expert, and Candidate roles with different permissions
 - **Interview Management**: Schedule and manage interviews between candidates and experts
 - **Candidate Matching**: Intelligent matching system for pairing candidates with experts
-- **Real-time Updates**: Live interview status updates and notifications
-- **Responsive Design**: Modern UI built with React and Tailwind CSS
+- **Real-time Updates**: Live interview status updates
 - **Secure API**: JWT-based authentication with role-based authorization
 
 ## 🛠️ Tech Stack
